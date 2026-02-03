@@ -1,22 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CFPS v2.2 - 水晶頻率定位系統</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #00f2ff;
+            --secondary: #bd00ff;
+            --accent: #ffb700;
+            --success: #00ff40; /* 孔雀石綠 */
+            --bg: #0a0a12;
+            --panel: #161622;
+            --text: #e0e0e0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        h2 {
+            font-family: 'Orbitron', sans-serif;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        /* 上傳區塊 */
+        .upload-section {
+            background: var(--panel);
+            border: 2px dashed #444;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.3s;
+            position: relative;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .upload-section:hover {
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.1);
+        }
+
+        #previewImage {
+            max-width: 100%;
+            max-height: 300px;
+            display: none;
+            border-radius: 8px;
+            margin-top: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        /* 按鈕 */
+        .btn-analyze {
+            background: linear-gradient(90deg, var(--secondary), var(--primary));
+            border: none;
+            color: white;
+            padding: 15px;
+            width: 100%;
+            border-radius: 8px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .btn-analyze:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        /* 結果面板 */
+        .results-panel {
+            display: none; /* 初始隱藏 */
+            background: var(--panel);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid #333;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .freq-display {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .freq-number {
+            font-size: 3rem;
+            font-family: 'Orbitron', sans-serif;
+            color: var(--primary);
+            text-shadow: 0 0 10px rgba(0, 242, 255, 0.3);
+        }
+
+        .freq-title {
+            font-size: 1.2rem;
+            color: var(--accent);
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin-top: 5px;
+        }
+
+        .log-box {
+            background: #000;
+            padding: 12px;
+            height: 150px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            color: #0f0;
+            border-radius: 6px;
+            margin-top: 20px;
+            border-left: 4px solid var(--secondary);
+        }
+        
+        /* 隱藏 Canvas 用於計算 */
+        #analysisCanvas {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>CFPS <span style="color:var(--primary)">v2.2</span> PATCHED</h2>
+    <p style="text-align:center; color:#666; font-size:0.8rem; margin-top:-10px;">包含膚色過濾與孔雀石數據庫</p>
+
+    <canvas id="analysisCanvas"></canvas>
+
+    <div class="upload-section" onclick="document.getElementById('fileInput').click()">
+        <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)" style="display:none;">
+        <div id="uploadPlaceholder">
+            <div style="font-size:3rem; margin-bottom:10px;">📷</div>
+            <h3>點擊上傳測試照片</h3>
+            <p style="color:#888; font-size:0.9rem;">支援自動濾除背景雜訊</p>
+        </div>
+        <img id="previewImage" src="" alt="Crystal Preview">
+    </div>
+
+    <button class="btn-analyze" id="analyzeBtn" onclick="runDynamicAnalysis()" disabled>啟動 AI 視覺分析</button>
+
+    <div class="results-panel" id="resultsPanel">
+        <div class="freq-display">
+            <div class="freq-number" id="finalFreq">--- Hz</div>
+            <div class="freq-title" id="finalTitle">CALCULATING...</div>
+        </div>
+        
+        <div style="position: relative; height:250px; width:100%;">
+            <canvas id="radarChart"></canvas>
+        </div>
+
+        <div class="log-box" id="systemLog">
+            <div>> System Ready. v2.2 Loaded.</div>
+        </div>
+    </div>
+</div>
+
 <script>
-    // --- 1. 擴充晶石數據庫 (新增 Malachite) ---
+    // --- 1. 晶石數據庫 (新增 Malachite) ---
     const crystalDatabase = {
-        'amethyst': { name: '紫水晶 (Amethyst)', baseHz: 963, type: 'Spiritual', color: '#bd00ff', desc: '頂輪開啟、神性連接' },
-        'blue_tiger': { name: '藍虎眼 (Blue Tiger Eye)', baseHz: 680, type: 'Insight', color: '#00f2ff', desc: '眉心輪、洞察力' },
-        'citrine': { name: '黃水晶/鈦晶 (Citrine)', baseHz: 528, type: 'Manifest', color: '#ffb700', desc: '太陽輪、財富顯化' },
-        'obsidian': { name: '黑曜石 (Obsidian)', baseHz: 396, type: 'Grounding', color: '#444444', desc: '海底輪、強力扎根' },
-        'malachite': { name: '孔雀石 (Malachite)', baseHz: 639, type: 'Healing', color: '#00ff40', desc: '心輪、轉化與療癒' }, // ✅ 新增
-        'mixed_strategy': { name: '混合戰略 (Mixed)', baseHz: 639, type: 'Synergy', color: '#0088ff', desc: '【戰略指揮官】複合能量' }
+        'amethyst': { 
+            name: '紫水晶 (Amethyst)', 
+            baseHz: 963, 
+            type: 'Spiritual', 
+            color: '#bd00ff', 
+            desc: '頂輪開啟、神性連接' 
+        },
+        'blue_tiger': { 
+            name: '藍虎眼 (Blue Tiger Eye)', 
+            baseHz: 680, 
+            type: 'Insight', 
+            color: '#00f2ff', 
+            desc: '眉心輪、洞察力' 
+        },
+        'citrine': { 
+            name: '黃水晶/鈦晶 (Citrine)', 
+            baseHz: 528, 
+            type: 'Manifest', 
+            color: '#ffb700', 
+            desc: '太陽輪、財富顯化' 
+        },
+        'obsidian': { 
+            name: '黑曜石 (Obsidian)', 
+            baseHz: 396, 
+            type: 'Grounding', 
+            color: '#888888', 
+            desc: '海底輪、強力扎根' 
+        },
+        'malachite': { 
+            name: '孔雀石 (Malachite)', 
+            baseHz: 639, 
+            type: 'Healing', 
+            color: '#00ff40', 
+            desc: '心輪、轉化與療癒' 
+        },
+        'mixed_strategy': { 
+            name: '混合戰略 (Mixed)', 
+            baseHz: 639, 
+            type: 'Synergy', 
+            color: '#0088ff', 
+            desc: '【戰略指揮官】複合能量' 
+        }
     };
 
     let currentImgElement = null;
 
+    // --- 日誌功能 ---
     function log(msg) {
         const box = document.getElementById('systemLog');
-        box.innerHTML += `> ${msg}<br>`;
+        const time = new Date().toLocaleTimeString('en-US', {hour12: false, hour: "numeric", minute: "numeric", second: "numeric"});
+        box.innerHTML += `<div>[${time}] ${msg}</div>`;
         box.scrollTop = box.scrollHeight;
     }
 
+    // --- 文件處理 ---
     function handleFileSelect(event) {
         const file = event.target.files[0];
         if (file) {
@@ -26,25 +252,28 @@
                 img.src = e.target.result;
                 img.style.display = 'block';
                 currentImgElement = img;
+                
                 document.getElementById('uploadPlaceholder').style.display = 'none';
                 document.getElementById('analyzeBtn').disabled = false;
+                
+                // 重置並隱藏結果面板
                 document.getElementById('resultsPanel').style.display = 'none';
+                document.getElementById('systemLog').innerHTML = '<div>> Image loaded. Ready.</div>';
             };
             reader.readAsDataURL(file);
         }
     }
 
+    // --- 核心運算 ---
     function runDynamicAnalysis() {
         document.getElementById('resultsPanel').style.display = 'block';
-        const logBox = document.getElementById('systemLog');
-        logBox.innerHTML = '';
         log("Scanning image pixel data...");
 
         const canvas = document.getElementById('analysisCanvas');
         const ctx = canvas.getContext('2d');
         const img = currentImgElement;
         
-        // 縮小圖片以加速
+        // 縮小圖片以加速計算，但保持足夠細節
         canvas.width = 100;
         canvas.height = 100;
         ctx.drawImage(img, 0, 0, 100, 100);
@@ -55,18 +284,18 @@
         let r_sum = 0, g_sum = 0, b_sum = 0;
         let pixelCount = 0;
 
-        // --- 🤖 智能採樣算法 (v2.2 Update) ---
+        // --- 🤖 智能採樣算法 (Skin Tone / Grey Filter) ---
+        // 我們只計算「有色彩傾向」的像素，忽略灰色和膚色(通常飽和度低)
         for (let i = 0; i < data.length; i += 4) {
-            let r = data[i], g = data[i+1], b = data[i+2];
+            let r = data[i];
+            let g = data[i+1];
+            let b = data[i+2];
 
-            // 🚫 簡單膚色過濾 (Skin Tone Filter)
-            // 膚色通常是 紅色 > 綠色 > 藍色，且差異不大。
-            // 我們這裡嘗試只計算「色彩鮮豔」的像素 (Saturation Check)
             let max = Math.max(r, g, b);
             let min = Math.min(r, g, b);
-            let saturation = max - min;
+            let saturation = max - min; // 簡單的飽和度計算
 
-            // 如果顏色太灰 (飽和度低) 或是太像膚色，就不計入平均
+            // 閾值設定：如果 RGB 差異小於 20，視為灰色/背景/皮膚反光，不計入
             if (saturation > 20) { 
                 r_sum += r;
                 g_sum += g;
@@ -75,52 +304,55 @@
             }
         }
 
-        // 如果整張圖都很灰，就只好全算
+        // 防止除以零
         if (pixelCount === 0) { pixelCount = 1; }
 
         let r = Math.floor(r_sum / pixelCount);
         let g = Math.floor(g_sum / pixelCount);
         let b = Math.floor(b_sum / pixelCount);
 
-        log(`Filtered RGB (No Skin): (${r}, ${g}, ${b})`);
+        log(`Filtered RGB: (${r}, ${g}, ${b})`);
+        log(`Valid Pixels: ${Math.floor((pixelCount/2500)*100)}% coverage`);
 
         // --- 🌈 色彩判定邏輯 ---
-        let detectedType = 'obsidian';
+        let detectedType = 'obsidian'; // 默認
         
-        // 🟢 孔雀石/綠色判定 (新增)
-        // 綠色數值必須比紅藍都高
+        // 1. 孔雀石/綠色判定 (優先級高)
+        // 綠色分量明顯大於紅和藍
         if (g > r + 10 && g > b + 10) {
             detectedType = 'malachite';
         }
-        // 🟣 紫色判定
+        // 2. 紫色判定
         else if (r > 100 && b > 100 && g < 100) {
             detectedType = 'amethyst';
         } 
-        // 🔵 藍色判定
+        // 3. 藍色判定
         else if (b > r + 20 && b > g) {
-            if (b < 100) detectedType = 'blue_tiger'; 
-            else detectedType = 'blue_tiger';
+             // 簡單邏輯：藍色系統一先歸類為藍虎眼
+            detectedType = 'blue_tiger'; 
         }
-        // 🟡 黃色判定
+        // 4. 黃色/金色判定
         else if (r > 120 && g > 100 && b < 100) {
             detectedType = 'citrine';
         }
-        // ⚫ 黑色/深色判定
-        else if (r < 70 && g < 70 && b < 70) {
+        // 5. 黑色/深色判定
+        // 如果經過過濾後數值依然很低，或者無法歸類
+        else {
             detectedType = 'obsidian';
         }
         
-        // 混合觸發 (Demo)
-        if (detectedType === 'blue_tiger' && Math.random() > 0.7) {
+        // *Demo 隨機性*：針對藍虎眼的混合戰略 (保留此功能以演示特殊ID)
+        if (detectedType === 'blue_tiger' && Math.random() > 0.8) {
             detectedType = 'mixed_strategy';
         }
 
         const result = crystalDatabase[detectedType];
         
+        // 模擬 AI 思考時間
         setTimeout(() => {
-            log(`AI Recognition: ${result.name}`);
+            log(`AI Match: ${result.name}`);
             updateUI(result, detectedType);
-        }, 800);
+        }, 600);
     }
 
     function updateUI(data, type) {
@@ -132,46 +364,66 @@
         else if(type === 'amethyst') title = "THE AWAKENER";
         else if(type === 'blue_tiger') title = "THE INSIGHT";
         else if(type === 'citrine') title = "THE MANIFESTER";
-        else if(type === 'malachite') title = "THE HEALER (療癒者)"; // ✅
-        else title = "THE GUARDIAN";
+        else if(type === 'malachite') title = "THE HEALER (療癒者)";
+        else title = "THE GUARDIAN (守護者)";
         
         document.getElementById('finalTitle').innerText = title;
         document.getElementById('finalTitle').style.color = data.color;
 
-        log(`Target: ${title}`);
+        log(`Classification: ${title}`);
         drawRadar(type);
     }
 
+    // --- 雷達圖繪製 ---
     let radarChartInstance = null;
     function drawRadar(type) {
         const ctx = document.getElementById('radarChart').getContext('2d');
+        
+        // 定義不同水晶的雷達數值 [靈性, 扎根, 顯化, 防禦, 心輪/直覺]
         let d = [50, 50, 50, 50, 50];
         
         if (type === 'amethyst') d = [90, 20, 40, 30, 80];
         if (type === 'blue_tiger') d = [70, 40, 60, 50, 60];
         if (type === 'citrine') d = [40, 80, 90, 40, 50];
         if (type === 'obsidian') d = [20, 90, 30, 90, 40];
-        if (type === 'malachite') d = [40, 50, 40, 60, 90]; // 🟢 心輪高
+        if (type === 'malachite') d = [40, 50, 40, 60, 90]; // 特徵：心輪高
         if (type === 'mixed_strategy') d = [75, 75, 60, 70, 60];
 
         if(radarChartInstance) radarChartInstance.destroy();
+
         radarChartInstance = new Chart(ctx, {
             type: 'radar',
             data: {
-                labels: ['靈性', '扎根', '顯化', '防禦', '直覺/心輪'],
+                labels: ['靈性 (Spirit)', '扎根 (Root)', '顯化 (Action)', '防禦 (Shield)', '心輪 (Heart)'],
                 datasets: [{
-                    label: '能量',
+                    label: 'Energy Profile',
                     data: d,
                     backgroundColor: 'rgba(255, 255, 255, 0.1)',
                     borderColor: crystalDatabase[type] ? crystalDatabase[type].color : '#fff',
                     pointBackgroundColor: '#fff',
-                    borderWidth: 2
+                    borderWidth: 2,
+                    pointRadius: 3
                 }]
             },
             options: {
-                scales: { r: { angleLines: {color:'#333'}, grid: {color:'#333'}, ticks: {display: false, max:100} } },
-                plugins: { legend: {display:false} }
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        angleLines: { color: '#333' },
+                        grid: { color: '#333' },
+                        pointLabels: { 
+                            color: '#aaa',
+                            font: { size: 10 }
+                        },
+                        ticks: { display: false, max: 100, min: 0 }
+                    }
+                },
+                plugins: { legend: { display: false } }
             }
         });
     }
 </script>
+
+</body>
+</html>
