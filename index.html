@@ -3,269 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CFPS v2.0 - 複合水晶頻率定位系統</title>
+    <title>CFPS v2.1 - 動態模擬版</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #00f2ff;
             --secondary: #bd00ff;
-            --accent: #ffb700; /* 金色，代表金屬/混合 */
+            --accent: #ffb700;
             --bg: #0a0a12;
             --panel: #161622;
             --text: #e0e0e0;
-            --success: #00ff9d;
         }
-
-        body {
-            background-color: var(--bg);
-            color: var(--text);
-            font-family: 'Roboto', sans-serif;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-        }
-
-        h1, h2, h3 { font-family: 'Orbitron', sans-serif; margin: 0; }
-
-        .container { max-width: 900px; width: 100%; display: grid; gap: 20px; }
-
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #333;
-            padding-bottom: 20px;
-        }
-
-        .logo {
-            font-size: 1.5rem;
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: bold;
-        }
-
-        /* 複合分析區塊 */
-        .results-panel {
-            display: none;
-            grid-template-columns: 2fr 1fr;
-            gap: 20px;
-            animation: fadeIn 0.5s ease-in;
-        }
-
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-        .card {
-            background: var(--panel);
-            padding: 20px;
-            border-radius: 12px;
-            border: 1px solid #333;
-            position: relative;
-        }
-
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            border-bottom: 1px solid #333;
-            padding-bottom: 10px;
-        }
-
-        /* 晶石組件條 */
-        .component-bar {
-            display: flex;
-            height: 8px;
-            border-radius: 4px;
-            overflow: hidden;
-            margin: 10px 0;
-            background: #333;
-        }
-        .comp-segment { height: 100%; transition: width 1s ease; }
-
-        .component-list {
-            font-size: 0.9rem;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        .comp-item { display: flex; justify-content: space-between; align-items: center; }
-        .comp-badge {
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: bold;
-            color: #000;
-        }
-
-        /* 頻率大字 */
-        .freq-display {
-            text-align: center;
-            margin: 20px 0;
-        }
-        .freq-number {
-            font-size: 3.5rem;
-            font-family: 'Orbitron', sans-serif;
-            color: var(--primary);
-            text-shadow: 0 0 20px rgba(0, 242, 255, 0.3);
-        }
-        .freq-title {
-            font-size: 1.2rem;
-            color: var(--accent);
-            font-weight: bold;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-        }
-
-        /* 按鈕與上傳 */
-        .upload-section {
-            background: var(--panel);
-            border: 2px dashed #444;
-            border-radius: 12px;
-            padding: 30px;
-            text-align: center;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-        .upload-section:hover { border-color: var(--primary); }
-        #previewImage { max-width: 100%; max-height: 300px; display: none; border-radius: 8px; margin-top: 10px; }
+        body { background-color: var(--bg); color: var(--text); font-family: 'Roboto', sans-serif; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { max-width: 800px; width: 100%; display: grid; gap: 20px; }
         
-        .btn-analyze {
-            background: linear-gradient(45deg, var(--secondary), var(--primary));
-            border: none;
-            color: white;
-            padding: 15px;
-            width: 100%;
-            border-radius: 8px;
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.1rem;
-            cursor: pointer;
-            transition: 0.2s;
-        }
+        /* UI Components */
+        .upload-section { background: var(--panel); border: 2px dashed #444; border-radius: 12px; padding: 20px; text-align: center; cursor: pointer; transition: 0.3s; }
+        .upload-section:hover { border-color: var(--primary); }
+        #previewImage { max-width: 100%; max-height: 250px; display: none; margin: 10px auto; border-radius: 8px; }
+        
+        .btn-analyze { background: linear-gradient(45deg, var(--secondary), var(--primary)); border: none; color: white; padding: 15px; width: 100%; border-radius: 8px; font-family: 'Orbitron'; cursor: pointer; font-size: 1.1rem; margin-top:10px;}
         .btn-analyze:disabled { background: #444; cursor: not-allowed; }
 
-        /* 運算日誌 */
-        .log-box {
-            font-family: 'Courier New', monospace;
-            font-size: 0.8rem;
-            color: #888;
-            height: 150px;
-            overflow-y: auto;
-            background: #000;
-            padding: 15px;
-            border-radius: 8px;
-            border-left: 3px solid var(--accent);
-        }
-        .log-entry { margin-bottom: 5px; opacity: 0; animation: typeIn 0.3s forwards; }
-        @keyframes typeIn { to { opacity: 1; } }
+        .results-panel { display: none; background: var(--panel); padding: 20px; border-radius: 12px; border: 1px solid #333; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; } }
 
-        /* 特殊文字顏色 */
-        .txt-blue { color: var(--primary); }
-        .txt-brown { color: #cd7f32; } /* 古銅色 */
-        .txt-gold { color: var(--accent); }
+        .freq-number { font-size: 3rem; font-family: 'Orbitron'; color: var(--primary); text-align: center; margin: 10px 0; text-shadow: 0 0 15px rgba(0, 242, 255, 0.4); }
+        .freq-title { text-align: center; color: var(--accent); font-weight: bold; letter-spacing: 1px; margin-bottom: 20px; }
+        
+        .log-box { background: #000; padding: 10px; height: 120px; overflow-y: auto; font-family: monospace; font-size: 0.8rem; color: #0f0; border-radius: 6px; margin-top: 20px; border-left: 3px solid var(--secondary); }
+        
+        canvas { max-height: 300px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <header>
-        <div class="logo">CFPS v2.0 <span style="font-size:0.5em; color:#666;">// COMPOSITE ENGINE</span></div>
-        <div style="font-family:'Orbitron'; color:var(--success);">SYSTEM ONLINE</div>
-    </header>
+    <h2 style="font-family:'Orbitron'; text-align:center;">CFPS <span style="color:var(--primary)">v2.1</span> DYNAMIC</h2>
+    
+    <canvas id="analysisCanvas" style="display:none;"></canvas>
 
     <div class="upload-section" onclick="document.getElementById('fileInput').click()">
         <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)">
         <div id="uploadPlaceholder">
-            <h3>📥 上傳水晶手鍊照片</h3>
-            <p style="color:#888;">支援混合水晶識別 (Demo 模式)</p>
+            <h3>📷 點擊上傳圖片測試</h3>
+            <p style="color:#888;">系統將根據圖片顏色動態改變分析結果</p>
+            <p style="font-size:0.8rem; color:#666;">試試看：藍色(虎眼)、紫色(紫晶)、黃色(鈦晶)</p>
         </div>
         <img id="previewImage" src="" alt="Preview">
     </div>
 
-    <button class="btn-analyze" id="analyzeBtn" onclick="runCompositeAnalysis()" disabled>啟動複合頻率運算</button>
+    <button class="btn-analyze" id="analyzeBtn" onclick="runDynamicAnalysis()" disabled>啟動 AI 視覺分析</button>
 
     <div class="results-panel" id="resultsPanel">
+        <div class="freq-number" id="finalFreq">--- Hz</div>
+        <div class="freq-title" id="finalTitle">ANALYZING...</div>
         
-        <div class="card">
-            <div class="card-header">
-                <h3>FREQUENCY ID</h3>
-                <span style="font-size:0.8rem; color:#666;">VECTOR SYNTHESIS</span>
-            </div>
-            
-            <div class="freq-display">
-                <div class="freq-number" id="finalFreq">0 Hz</div>
-                <div class="freq-title" id="finalTitle">ANALYZING...</div>
-            </div>
-
-            <div style="margin-top:20px;">
-                <span style="font-size:0.8rem; color:#aaa;">COMPONENT BREAKDOWN (組件拆解)</span>
-                <div class="component-bar" id="compBar"></div>
-                <div class="component-list" id="compList">
-                    </div>
-            </div>
-
-            <div style="margin-top: 20px; font-style: italic; color: #888; font-size: 0.9rem;" id="energyDesc">
-                等待分析...
-            </div>
+        <div style="display:flex; justify-content:center; margin-bottom:20px;">
+            <div style="width:300px;"><canvas id="radarChart"></canvas></div>
         </div>
 
-        <div style="display:flex; flex-direction:column; gap:20px;">
-            <div class="card" style="flex-grow:1;">
-                <canvas id="radarChart"></canvas>
-            </div>
-            <div class="log-box" id="systemLog">
-                <div class="log-entry">> System Ready. Waiting for input...</div>
-            </div>
-        </div>
+        <div class="log-box" id="systemLog"></div>
     </div>
 </div>
 
 <script>
-    // --- 1. 晶石數據庫 (Mock Database) ---
-    // 這是系統的「大腦知識庫」，定義了每種石頭的基礎屬性
+    // --- 1. 擴充晶石數據庫 ---
     const crystalDatabase = {
-        'blue_tiger_eye': { 
-            name: '藍虎眼 (Blue Tiger Eye)', 
-            baseHz: 680, 
-            type: 'Insight', 
-            color: '#00f2ff',
-            desc: '洞察、冷靜、過濾雜訊'
-        },
-        'bronzite': { 
-            name: '古銅輝石 (Bronzite)', 
-            baseHz: 430, 
-            type: 'Grounding', 
-            color: '#cd7f32',
-            desc: '防禦、扎根、實戰行動'
-        },
-        'metal_charm': { 
-            name: '金屬獸首 (Gold Charm)', 
-            baseHz: 0, 
-            type: 'Conductor', 
-            color: '#ffb700',
-            ampFactor: 1.15, // 金屬作為放大器，增加 15% 能量流動
-            desc: '能量匯聚與發射'
-        }
+        'amethyst': { name: '紫水晶 (Amethyst)', baseHz: 963, type: 'Spiritual', color: '#bd00ff', desc: '頂輪開啟、神性連接' },
+        'blue_tiger': { name: '藍虎眼 (Blue Tiger Eye)', baseHz: 680, type: 'Insight', color: '#00f2ff', desc: '眉心輪、洞察力' },
+        'citrine': { name: '黃水晶/鈦晶 (Citrine)', baseHz: 528, type: 'Manifest', color: '#ffb700', desc: '太陽輪、財富顯化' },
+        'obsidian': { name: '黑曜石 (Obsidian)', baseHz: 396, type: 'Grounding', color: '#444444', desc: '海底輪、強力扎根' },
+        'mixed_strategy': { name: '混合戰略 (Mixed)', baseHz: 639, type: 'Synergy', color: '#0088ff', desc: '【戰略指揮官】複合能量' }
     };
 
-    // --- 2. 模擬 AI 視覺識別結果 ---
-    // 在真實系統中，這裡會調用 Python/OpenCV 返回 JSON
-    // 為了演示，我們模擬您提供的 "IMG_7403.jpg" (藍虎眼+古銅輝石+金屬) 的識別結果
-    const mockDetectionResult = {
-        confidence: 0.94,
-        components: [
-            { id: 'blue_tiger_eye', count: 14 },
-            { id: 'bronzite', count: 2 },
-            { id: 'metal_charm', count: 1 } // 中間那顆金屬
-        ],
-        structure: 'symmetric_center' // 結構：對稱中心排列
-    };
+    let currentImgElement = null;
 
-    // --- 3. 核心功能 ---
+    function log(msg) {
+        const box = document.getElementById('systemLog');
+        box.innerHTML += `> ${msg}<br>`;
+        box.scrollTop = box.scrollHeight;
+    }
 
     function handleFileSelect(event) {
         const file = event.target.files[0];
@@ -275,186 +94,125 @@
                 const img = document.getElementById('previewImage');
                 img.src = e.target.result;
                 img.style.display = 'block';
+                currentImgElement = img; // 存起來待會分析用
                 document.getElementById('uploadPlaceholder').style.display = 'none';
                 document.getElementById('analyzeBtn').disabled = false;
-                
-                // 重置界面
                 document.getElementById('resultsPanel').style.display = 'none';
-                log("> Image loaded. Waiting for analysis trigger.");
             };
             reader.readAsDataURL(file);
         }
     }
 
-    function log(message, color = '#888') {
+    // --- 2. 模擬 AI 視覺識別 (基於顏色) ---
+    function runDynamicAnalysis() {
+        document.getElementById('resultsPanel').style.display = 'block';
         const logBox = document.getElementById('systemLog');
-        const entry = document.createElement('div');
-        entry.className = 'log-entry';
-        entry.style.color = color;
-        entry.innerText = message;
-        logBox.appendChild(entry);
-        logBox.scrollTop = logBox.scrollHeight;
-    }
+        logBox.innerHTML = '';
+        log("Scanning image pixel data...");
 
-    function runCompositeAnalysis() {
-        document.getElementById('resultsPanel').style.display = 'grid';
-        const logBox = document.getElementById('systemLog');
-        logBox.innerHTML = ''; // 清空
+        // 使用 Canvas 讀取圖片顏色
+        const canvas = document.getElementById('analysisCanvas');
+        const ctx = canvas.getContext('2d');
+        const img = currentImgElement;
         
-        log("> Initializing CFPS v2.0 Core...", "#fff");
+        canvas.width = 100; // 縮小圖片以加速計算
+        canvas.height = 100;
+        ctx.drawImage(img, 0, 0, 100, 100);
+        
+        // 獲取中心點的顏色數據 (模擬識別主石)
+        const frame = ctx.getImageData(0, 0, 100, 100);
+        const data = frame.data;
+        
+        let r = 0, g = 0, b = 0;
+        for (let i = 0; i < data.length; i += 4) {
+            r += data[i]; g += data[i+1]; b += data[i+2];
+        }
+        r = Math.floor(r / (data.length / 4));
+        g = Math.floor(g / (data.length / 4));
+        b = Math.floor(b / (data.length / 4));
+
+        log(`Detected Dominant RGB: (${r}, ${g}, ${b})`);
+
+        // --- 簡單的色彩判定邏輯 (模擬 AI 分類) ---
+        let detectedType = 'obsidian'; // 預設
+        
+        // 紫色判定 (紅+藍高，綠低)
+        if (r > 100 && b > 100 && g < 100) {
+            detectedType = 'amethyst';
+        } 
+        // 藍色判定 (藍高，紅綠相對低)
+        else if (b > r + 30 && b > g) {
+            // 如果很暗，可能是深藍虎眼
+            if (b < 100) detectedType = 'blue_tiger'; 
+            // 如果包含一些金色/黃色雜點 (這裡簡化模擬)，切換成混合模式
+            else detectedType = 'blue_tiger';
+        }
+        // 黃色/金色判定 (紅+綠高，藍低)
+        else if (r > 120 && g > 100 && b < 100) {
+            detectedType = 'citrine';
+        }
+        // 如果顏色很暗
+        else if (r < 60 && g < 60 && b < 60) {
+            detectedType = 'obsidian';
+        }
+        // 特殊：如果您上傳的是剛剛那張藍色帶褐色的，我們用亂數模擬一下「混合識別」
+        // (為了讓您測試到混合邏輯，這裡加了一個隨機觸發，如果是藍色系有 30% 機率判定為混合)
+        if (detectedType === 'blue_tiger' && Math.random() > 0.7) {
+            detectedType = 'mixed_strategy';
+        }
+
+        const result = crystalDatabase[detectedType];
         
         setTimeout(() => {
-            log("> Identifying components...", "var(--primary)");
-            analyzeComponents(mockDetectionResult);
+            log(`AI Recognition: ${result.name}`);
+            log(`Analyzing Frequency Structure...`);
+            updateUI(result, detectedType);
         }, 800);
     }
 
-    // --- 4. 複合頻率算法 (The Algorithm) ---
-    function analyzeComponents(data) {
-        let totalBeads = 0;
-        let weightedHzSum = 0;
-        let amplifier = 1.0;
-        let detectedNames = [];
+    function updateUI(data, type) {
+        document.getElementById('finalFreq').innerText = data.baseHz + " Hz";
+        document.getElementById('finalFreq').style.color = data.color;
         
-        // Step 1: 統計與基礎運算
-        data.components.forEach(item => {
-            const dbData = crystalDatabase[item.id];
-            
-            if (dbData.type === 'Conductor') {
-                // 如果是金屬/導體，不計入平均，而是更新放大係數
-                amplifier = dbData.ampFactor;
-                log(`> Detected Conductor: ${dbData.name} (Gain: +${(amplifier-1)*100}%)`, "var(--accent)");
-            } else {
-                // 如果是晶石，計入加權平均
-                totalBeads += item.count;
-                weightedHzSum += (dbData.baseHz * item.count);
-                log(`> Identified: ${item.count}x ${dbData.name} @ ${dbData.baseHz}Hz`, "#fff");
-            }
-            detectedNames.push(item.id);
-        });
-
-        // Step 2: 計算加權平均頻率 (Base Weighted Frequency)
-        let baseAvgHz = weightedHzSum / totalBeads;
-        log(`> Base Weighted Frequency: ${baseAvgHz.toFixed(1)} Hz`, "#aaa");
-
-        // Step 3: 應用結構與導體增益 (Apply Structure & Gain)
-        // 這裡就是您想要的「獨有頻率」計算邏輯
-        let finalHz = baseAvgHz;
+        let title = "";
+        if(type === 'mixed_strategy') title = "STRATEGIC COMMANDER (戰略指揮官)";
+        else if(type === 'amethyst') title = "THE AWAKENER (覺醒者)";
+        else if(type === 'blue_tiger') title = "THE INSIGHT (洞察者)";
+        else if(type === 'citrine') title = "THE MANIFESTER (顯化者)";
+        else title = "THE GUARDIAN (守護者)";
         
-        if (data.structure === 'symmetric_center') {
-             // 結構加成：如果是有序排列，頻率更穩定
-            log("> Structure Analysis: Symmetric (Stabilized)", "#00ff9d");
-        }
-
-        // 應用金屬放大
-        finalHz = finalHz * amplifier;
-        
-        // 根據混合情況進行微調 (Synergy Effect)
-        // 藍虎眼(高) + 古銅(低) = 中和反應
-        let synergyTitle = "";
-        let synergyDesc = "";
-        
-        if (detectedNames.includes('blue_tiger_eye') && detectedNames.includes('bronzite')) {
-            log("> DETECTED SYNERGY: [Insight] + [Action]", "var(--secondary)");
-            // 特殊數學調整：讓頻率趨向於心輪/喉輪的連接點 (溝通與決策)
-            finalHz = (finalHz + 639) / 2; 
-            synergyTitle = "THE STRATEGIC COMMANDER (戰略指揮官)";
-            synergyDesc = "能量流動分析：藍虎眼負責收集情報與冷靜分析，古銅輝石將意識錨定於現實並轉化為行動。金屬核心作為發射台。這是一個適合『決策者』與『管理者』的完美頻率組合。";
-        } else {
-            synergyTitle = "UNKNOWN MIX";
-            synergyDesc = "General mixed energy.";
-        }
-
-        log(`> FINAL COMPOSITE FREQUENCY: ${Math.round(finalHz)} Hz`, "#fff");
-
-        // Step 4: 更新 UI
-        updateUI(Math.round(finalHz), synergyTitle, synergyDesc, data);
-    }
-
-    function updateUI(freq, title, desc, data) {
-        // 更新大字
-        animateValue("finalFreq", 0, freq, 1500);
         document.getElementById('finalTitle').innerText = title;
-        document.getElementById('energyDesc').innerText = desc;
+        document.getElementById('finalTitle').style.color = data.color;
 
-        // 更新組件條
-        const bar = document.getElementById('compBar');
-        const list = document.getElementById('compList');
-        bar.innerHTML = '';
-        list.innerHTML = '';
+        log(`Calculation Complete. Target: ${title}`);
+        log(`Description: ${data.desc}`);
 
-        let totalCount = 0;
-        data.components.forEach(c => { if(crystalDatabase[c.id].baseHz > 0) totalCount += c.count; });
-
-        data.components.forEach(item => {
-            const db = crystalDatabase[item.id];
-            
-            // 進度條 (只算石頭佔比)
-            if (db.baseHz > 0) {
-                const width = (item.count / totalCount) * 100;
-                const seg = document.createElement('div');
-                seg.className = 'comp-segment';
-                seg.style.width = width + '%';
-                seg.style.backgroundColor = db.color;
-                bar.appendChild(seg);
-            }
-
-            // 列表項
-            const li = document.createElement('div');
-            li.className = 'comp-item';
-            li.innerHTML = `
-                <span>${db.name}</span>
-                <span class="comp-badge" style="background:${db.color}">${item.count}顆</span>
-            `;
-            list.appendChild(li);
-        });
-
-        // 繪製雷達圖
-        drawRadar(data);
+        drawRadar(type);
     }
 
-    function animateValue(id, start, end, duration) {
-        let obj = document.getElementById(id);
-        let startTimestamp = null;
-        const step = (timestamp) => {
-            if (!startTimestamp) startTimestamp = timestamp;
-            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-            obj.innerHTML = Math.floor(progress * (end - start) + start) + " Hz";
-            if (progress < 1) {
-                window.requestAnimationFrame(step);
-            }
-        };
-        window.requestAnimationFrame(step);
-    }
-
-    // --- 5. 繪製雷達圖 ---
-    function drawRadar(data) {
+    let radarChartInstance = null;
+    function drawRadar(type) {
         const ctx = document.getElementById('radarChart').getContext('2d');
         
-        // 簡單判定雷達數值 (Demo用)
-        // 藍虎眼多 = Insight高, 古銅多 = Grounding高
-        let insight = 0, grounding = 0, energy = 0;
+        let d = [50, 50, 50, 50, 50]; // Default
         
-        data.components.forEach(item => {
-            if (item.id === 'blue_tiger_eye') insight += item.count;
-            if (item.id === 'bronzite') grounding += item.count;
-            if (item.id === 'metal_charm') energy += 5; // 金屬加強能量輸出
-        });
+        if (type === 'amethyst') d = [90, 20, 40, 30, 80]; // 高靈性
+        if (type === 'blue_tiger') d = [70, 40, 60, 50, 60]; // 洞察
+        if (type === 'citrine') d = [40, 80, 90, 40, 50]; // 顯化/財富
+        if (type === 'obsidian') d = [20, 90, 30, 90, 40]; // 扎根/防禦
+        if (type === 'mixed_strategy') d = [75, 75, 60, 70, 60]; // 混合均衡
 
-        // Normalize
-        insight = (insight / 15) * 100;
-        grounding = (grounding / 15) * 100;
-        energy = 50 + energy; // 基礎 50
+        if(radarChartInstance) radarChartInstance.destroy();
 
-        new Chart(ctx, {
+        radarChartInstance = new Chart(ctx, {
             type: 'radar',
             data: {
-                labels: ['高頻洞察 (Crown)', '行動顯化 (Root)', '能量放射 (Output)', '防禦 (Shield)', '平衡 (Heart)'],
+                labels: ['靈性 (Spirit)', '扎根 (Root)', '顯化 (Action)', '防禦 (Shield)', '直覺 (Mind)'],
                 datasets: [{
-                    label: '複合能量指紋',
-                    data: [insight, grounding, energy, 60, 50], // 模擬數據
-                    backgroundColor: 'rgba(0, 242, 255, 0.2)',
-                    borderColor: '#00f2ff',
+                    label: '能量分佈',
+                    data: d,
+                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    borderColor: crystalDatabase[type] ? crystalDatabase[type].color : '#fff',
                     pointBackgroundColor: '#fff',
                     borderWidth: 2
                 }]
@@ -464,8 +222,8 @@
                     r: {
                         angleLines: { color: '#333' },
                         grid: { color: '#333' },
-                        pointLabels: { color: '#888', font: {family: 'Roboto'} },
-                        ticks: { display: false }
+                        pointLabels: { color: '#888', font: {size: 10} },
+                        ticks: { display: false, max: 100, min: 0 }
                     }
                 },
                 plugins: { legend: { display: false } }
